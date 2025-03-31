@@ -49,7 +49,7 @@ export function Sidebar() {
           <div className="space-y-1">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <a
+                <div
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                     location === item.href
@@ -59,7 +59,7 @@ export function Sidebar() {
                 >
                   {item.icon}
                   <span>{item.label}</span>
-                </a>
+                </div>
               </Link>
             ))}
           </div>
@@ -70,7 +70,7 @@ export function Sidebar() {
           </h2>
           <div className="space-y-1">
             <Link href="/profile">
-              <a
+              <div
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                   location === "/profile"
@@ -80,7 +80,7 @@ export function Sidebar() {
               >
                 <User className="h-5 w-5" />
                 <span>Profile</span>
-              </a>
+              </div>
             </Link>
             <a
               className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -105,7 +105,7 @@ export function Sidebar() {
           <img 
             alt="User avatar" 
             className="h-10 w-10 rounded-full object-cover" 
-            src={user.profilePicture} 
+            src={user.profilePicture || 'https://via.placeholder.com/40'} 
           />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50 truncate">

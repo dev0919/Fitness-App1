@@ -18,6 +18,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/workouts" component={Workouts} />
+      <ProtectedRoute path="/workouts/new" component={Workouts} />
       <ProtectedRoute path="/goals" component={Goals} />
       <ProtectedRoute path="/friends" component={Friends} />
       <ProtectedRoute path="/feed" component={Feed} />

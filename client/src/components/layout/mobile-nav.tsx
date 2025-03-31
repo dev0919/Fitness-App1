@@ -23,18 +23,18 @@ export function MobileNav() {
           if (isMiddle) {
             return (
               <Link key={item.href} href="/workouts/new">
-                <a className="flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-center">
                   <div className="bg-primary text-white rounded-full h-12 w-12 flex items-center justify-center -mt-6">
                     <Plus className="text-xl" />
                   </div>
-                </a>
+                </div>
               </Link>
             );
           }
           
           return (
             <Link key={item.href} href={item.href}>
-              <a className={cn(
+              <div className={cn(
                 "flex flex-col items-center justify-center",
                 location === item.href
                   ? "text-primary"
@@ -42,7 +42,7 @@ export function MobileNav() {
               )}>
                 {item.icon}
                 <span className="text-xs mt-1">{item.label}</span>
-              </a>
+              </div>
             </Link>
           );
         })}
