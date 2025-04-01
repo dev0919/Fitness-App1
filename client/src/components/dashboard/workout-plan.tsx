@@ -70,7 +70,7 @@ export function WorkoutPlan({ workout }: WorkoutPlanProps) {
     <Card className="h-full">
       <div className="p-4 border-b dark:border-neutral-700 flex justify-between items-center">
         <div>
-          <h3 className="font-medium">{workout.title}</h3>
+          <h3 className="font-medium">{workout.name}</h3>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {workout.duration} min • {workout.difficulty}
           </p>

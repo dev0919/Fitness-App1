@@ -25,6 +25,7 @@ export interface IStorage {
   createWorkout(workout: InsertWorkout): Promise<Workout>;
   updateWorkout(id: number, workout: Partial<Workout>): Promise<Workout | undefined>;
   deleteWorkout(id: number): Promise<boolean>;
+  getAllTemplateWorkouts(): Promise<Workout[]>; // Add this method to get template workouts
   
   // Exercise operations
   getExercise(id: number): Promise<Exercise | undefined>;
@@ -59,7 +60,7 @@ export interface IStorage {
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Changed from session.SessionStore to avoid TypeScript error
 }
 
 export class MemStorage implements IStorage {
@@ -100,6 +101,111 @@ export class MemStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // Clear expired sessions every 24h
     });
+    
+    // Add pre-existing workout templates
+    this.addPreExistingWorkouts();
+  }
+  
+  // Method to add pre-existing workouts to the database
+  private addPreExistingWorkouts() {
+    const presetWorkouts = [
+      {
+        name: "Full Body Strength",
+        description: "A comprehensive workout targeting all major muscle groups.",
+        type: "strength",
+        duration: 60,
+        difficulty: "intermediate",
+        exercises: [
+          { name: "Barbell Squat", sets: 4, reps: 8, weight: 135, restTime: 90, notes: "Focus on form" },
+          { name: "Bench Press", sets: 4, reps: 8, weight: 115, restTime: 90, notes: "Keep elbows tucked" },
+          { name: "Bent Over Row", sets: 4, reps: 10, weight: 95, restTime: 90, notes: "Engage your lats" },
+          { name: "Shoulder Press", sets: 3, reps: 10, weight: 65, restTime: 90, notes: "Push straight up" },
+          { name: "Romanian Deadlift", sets: 3, reps: 10, weight: 135, restTime: 90, notes: "Hinge at the hips" }
+        ]
+      },
+      {
+        name: "HIIT Cardio Blast",
+        description: "High-intensity interval training to boost cardiovascular fitness and burn calories.",
+        type: "cardio",
+        duration: 30,
+        difficulty: "advanced",
+        exercises: [
+          { name: "Burpees", sets: 4, reps: 15, weight: 0, restTime: 30, notes: "Full range of motion" },
+          { name: "Mountain Climbers", sets: 4, reps: 30, weight: 0, restTime: 30, notes: "Keep core tight" },
+          { name: "Jump Squats", sets: 4, reps: 20, weight: 0, restTime: 30, notes: "Land softly" },
+          { name: "High Knees", sets: 4, duration: 30, weight: 0, restTime: 30, notes: "Stay on toes" },
+          { name: "Plank Jacks", sets: 4, reps: 20, weight: 0, restTime: 30, notes: "Maintain plank position" }
+        ]
+      },
+      {
+        name: "Yoga Flow",
+        description: "A rejuvenating yoga sequence to improve flexibility, balance, and mental focus.",
+        type: "flexibility",
+        duration: 45,
+        difficulty: "beginner",
+        exercises: [
+          { name: "Sun Salutation", sets: 3, reps: 5, weight: 0, restTime: 0, notes: "Flow with breath" },
+          { name: "Warrior Sequence", sets: 2, duration: 300, weight: 0, restTime: 60, notes: "Both sides" },
+          { name: "Balance Poses", sets: 1, duration: 600, weight: 0, restTime: 60, notes: "Tree, Eagle, Dancer" },
+          { name: "Core Yoga", sets: 1, duration: 300, weight: 0, restTime: 60, notes: "Boat pose variations" },
+          { name: "Final Relaxation", sets: 1, duration: 600, weight: 0, restTime: 0, notes: "Savasana" }
+        ]
+      },
+      {
+        name: "Upper Body Focus",
+        description: "Target your chest, back, shoulders, and arms with this comprehensive upper body workout.",
+        type: "strength",
+        duration: 50,
+        difficulty: "intermediate",
+        exercises: [
+          { name: "Incline Dumbbell Press", sets: 4, reps: 10, weight: 35, restTime: 90, notes: "Control the descent" },
+          { name: "Pull-ups", sets: 4, reps: 8, weight: 0, restTime: 90, notes: "Full range of motion" },
+          { name: "Lateral Raises", sets: 3, reps: 12, weight: 15, restTime: 60, notes: "Slight bend in elbows" },
+          { name: "Tricep Dips", sets: 3, reps: 12, weight: 0, restTime: 60, notes: "Keep elbows close" },
+          { name: "Bicep Curls", sets: 3, reps: 12, weight: 25, restTime: 60, notes: "Alternate arms" }
+        ]
+      },
+      {
+        name: "Lower Body Blast",
+        description: "Build strength and endurance in your legs and glutes with this targeted workout.",
+        type: "strength",
+        duration: 45,
+        difficulty: "intermediate",
+        exercises: [
+          { name: "Goblet Squats", sets: 4, reps: 12, weight: 50, restTime: 90, notes: "Keep chest up" },
+          { name: "Romanian Deadlifts", sets: 4, reps: 10, weight: 115, restTime: 90, notes: "Feel the hamstrings" },
+          { name: "Walking Lunges", sets: 3, reps: 20, weight: 20, restTime: 60, notes: "10 each leg" },
+          { name: "Calf Raises", sets: 3, reps: 15, weight: 25, restTime: 60, notes: "Full extension" },
+          { name: "Glute Bridges", sets: 3, reps: 15, weight: 45, restTime: 60, notes: "Squeeze at the top" }
+        ]
+      }
+    ];
+    
+    // Add each workout to the storage
+    for (const workoutData of presetWorkouts) {
+      const { exercises: exerciseList, ...workoutDetails } = workoutData;
+      
+      // Add the workout
+      const workout: Workout = {
+        ...workoutDetails,
+        id: this.workoutIdCounter++,
+        userId: 0, // System workout (0 means it's a template)
+        completed: false,
+        createdAt: new Date()
+      };
+      this.workouts.set(workout.id, workout);
+      
+      // Add the exercises for this workout
+      for (const exerciseData of exerciseList) {
+        const exercise: Exercise = {
+          ...exerciseData,
+          id: this.exerciseIdCounter++,
+          workoutId: workout.id,
+          completed: false
+        };
+        this.exercises.set(exercise.id, exercise);
+      }
+    }
   }
 
   // User operations
@@ -155,6 +261,12 @@ export class MemStorage implements IStorage {
   
   async deleteWorkout(id: number): Promise<boolean> {
     return this.workouts.delete(id);
+  }
+  
+  async getAllTemplateWorkouts(): Promise<Workout[]> {
+    return Array.from(this.workouts.values()).filter(
+      workout => workout.userId === 0
+    );
   }
   
   // Exercise operations

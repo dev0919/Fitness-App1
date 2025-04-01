@@ -23,17 +23,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const workouts = pgTable("workouts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  title: text("title").notNull(),
+  name: text("name").notNull(),
   description: text("description"),
+  type: text("type").notNull(), // 'strength', 'cardio', 'flexibility', etc.
   duration: integer("duration").notNull(),
   difficulty: text("difficulty").notNull(),
   completed: boolean("completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertWorkoutSchema = createInsertSchema(workouts).pick({
   userId: true,
-  title: true,
+  name: true,
   description: true,
+  type: true, 
   duration: true,
   difficulty: true,
 });
@@ -44,9 +47,12 @@ export const exercises = pgTable("exercises", {
   workoutId: integer("workout_id").notNull(),
   name: text("name").notNull(),
   sets: integer("sets").notNull(),
-  reps: integer("reps").notNull(),
+  reps: integer("reps"),
+  duration: integer("duration"),
+  weight: integer("weight"),
+  restTime: integer("rest_time"),
+  notes: text("notes"),
   completed: boolean("completed").default(false),
-  type: text("type").notNull(), // 'strength', 'cardio', etc.
 });
 
 export const insertExerciseSchema = createInsertSchema(exercises).pick({
@@ -54,7 +60,10 @@ export const insertExerciseSchema = createInsertSchema(exercises).pick({
   name: true,
   sets: true,
   reps: true,
-  type: true,
+  duration: true,
+  weight: true,
+  restTime: true,
+  notes: true,
 });
 
 // Goals

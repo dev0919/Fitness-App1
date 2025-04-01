@@ -6,6 +6,26 @@ import { insertWorkoutSchema, insertExerciseSchema, insertGoalSchema, insertFrie
 import { z } from "zod";
 import crypto from "crypto";
 
+// Helper function to generate mock contacts
+function generateMockContacts(domain: string, userId: number): { name: string; email: string }[] {
+  const names = [
+    "John Smith", "Emily Johnson", "Michael Brown", "Olivia Davis", 
+    "William Wilson", "Sophia Martinez", "James Taylor", "Isabella Anderson",
+    "Benjamin Thomas", "Mia Garcia", "Lucas White", "Charlotte Lewis"
+  ];
+  
+  // Exclude some random names to have variation
+  const selectedNames = names.filter(() => Math.random() > 0.3).slice(0, 5);
+  
+  return selectedNames.map(name => {
+    const firstName = name.split(' ')[0].toLowerCase();
+    return {
+      name,
+      email: `${firstName}${Math.floor(Math.random() * 1000)}@${domain}`
+    };
+  });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
@@ -36,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActivity({
         userId,
         type: "workout_created",
-        content: `Created a new workout: ${workout.title}`,
+        content: `Created a new workout: ${workout.name}`,
         metadata: { workoutId: workout.id }
       });
       
@@ -85,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createActivity({
           userId: req.user!.id,
           type: "workout_completed",
-          content: `Completed workout: ${updatedWorkout!.title}`,
+          content: `Completed workout: ${updatedWorkout!.name}`,
           metadata: { workoutId }
         });
         
@@ -440,6 +460,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.user!.id;
     const achievements = await storage.getUserAchievements(userId);
     res.json(achievements);
+  });
+
+  // Template workouts - get all system workouts (userId = 0)
+  app.get("/api/workouts/templates", isAuthenticated, async (req, res) => {
+    try {
+      // Get all template workouts (userId = 0)
+      const workouts = await storage.getAllTemplateWorkouts();
+      res.json(workouts);
+    } catch (error) {
+      console.error("Error fetching template workouts:", error);
+      res.status(500).json({ message: "Error fetching template workouts" });
+    }
+  });
+  
+  // Clone a template workout for the current user
+  app.post("/api/workouts/clone/:id", isAuthenticated, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const template = await storage.getWorkout(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template workout not found" });
+      }
+      
+      if (template.userId !== 0) {
+        return res.status(400).json({ message: "Not a template workout" });
+      }
+      
+      // Create a new workout based on the template
+      const newWorkout = await storage.createWorkout({
+        userId: req.user!.id,
+        name: template.name,
+        description: template.description,
+        type: template.type,
+        duration: template.duration,
+        difficulty: template.difficulty
+      });
+      
+      // Get exercises from the template
+      const exercises = await storage.getWorkoutExercises(templateId);
+      
+      // Create exercises for the new workout
+      for (const exercise of exercises) {
+        await storage.createExercise({
+          workoutId: newWorkout.id,
+          name: exercise.name,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          duration: exercise.duration,
+          weight: exercise.weight,
+          restTime: exercise.restTime,
+          notes: exercise.notes
+        });
+      }
+      
+      // Create activity for cloning a workout
+      await storage.createActivity({
+        userId: req.user!.id,
+        type: "workout_cloned",
+        content: `${req.user!.name} created a new workout from the '${template.name}' template`,
+        metadata: { workoutId: newWorkout.id, templateId }
+      });
+      
+      res.status(201).json(newWorkout);
+    } catch (error) {
+      console.error("Error cloning workout:", error);
+      res.status(500).json({ message: "Error cloning workout" });
+    }
+  });
+  
+  // Import contacts API 
+  app.post("/api/friends/import", isAuthenticated, async (req, res) => {
+    const { source, email } = req.body;
+    
+    if (!source || !email) {
+      return res.status(400).json({ message: "Source and email are required" });
+    }
+    
+    try {
+      // Generate some mock contacts based on the provided email domain
+      const domain = email.split('@')[1];
+      const mockContacts = generateMockContacts(domain, req.user!.id);
+      
+      // Add these contacts as potential friends
+      const addedFriends = [];
+      for (const contact of mockContacts) {
+        // Check if user exists
+        let contactUser = await storage.getUserByEmail(contact.email);
+        
+        // If not, create a mock user for this contact
+        if (!contactUser) {
+          contactUser = await storage.createUser({
+            username: contact.email.split('@')[0],
+            password: crypto.randomBytes(16).toString('hex'), // Random password
+            name: contact.name,
+            email: contact.email
+          });
+        }
+        
+        // Create a friendship request
+        const friend = await storage.createFriend({
+          userId: req.user!.id,
+          friendId: contactUser.id,
+          status: 'pending'
+        });
+        
+        addedFriends.push({
+          id: friend.id,
+          name: contactUser.name,
+          email: contactUser.email,
+          status: 'pending'
+        });
+      }
+      
+      // Create activity for importing contacts
+      await storage.createActivity({
+        userId: req.user!.id,
+        type: "friends_imported",
+        content: `${req.user!.name} imported ${addedFriends.length} contacts from ${source}`,
+        metadata: { source, count: addedFriends.length }
+      });
+      
+      res.status(201).json({ 
+        message: `Successfully imported ${addedFriends.length} contacts from ${source}`,
+        friends: addedFriends 
+      });
+    } catch (error) {
+      console.error(`Error importing contacts from ${source}:`, error);
+      res.status(500).json({ message: `Error importing contacts from ${source}` });
+    }
   });
 
   // Stats route
