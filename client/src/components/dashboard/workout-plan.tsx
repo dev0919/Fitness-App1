@@ -41,9 +41,32 @@ export function WorkoutPlan({ workout }: WorkoutPlanProps) {
     },
   });
   
+  // Updated to handle "In Progress" state
   const startWorkoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("PUT", `/api/workouts/${workout.id}`, { completed: true });
+      await apiRequest("PUT", `/api/workouts/${workout.id}`, { inProgress: true });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Workout Started",
+        description: "Your workout has been started. Complete the exercises and click 'Finish' when done.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to start workout",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // New mutation for completing a workout
+  const completeWorkoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PUT", `/api/workouts/${workout.id}`, { completed: true, inProgress: false });
     },
     onSuccess: () => {
       toast({
@@ -62,8 +85,8 @@ export function WorkoutPlan({ workout }: WorkoutPlanProps) {
     },
   });
   
-  const handleMarkComplete = (exerciseId: number, currentStatus: boolean) => {
-    markExerciseMutation.mutate({ id: exerciseId, completed: !currentStatus });
+  const handleMarkComplete = (exerciseId: number, currentStatus: boolean | null) => {
+    markExerciseMutation.mutate({ id: exerciseId, completed: !(currentStatus === true) });
   };
   
   return (
@@ -131,12 +154,28 @@ export function WorkoutPlan({ workout }: WorkoutPlanProps) {
         <div className="text-sm text-neutral-500 dark:text-neutral-400">
           {completedExercises} of {totalExercises} exercises completed
         </div>
-        <Button 
-          onClick={() => startWorkoutMutation.mutate()}
-          disabled={startWorkoutMutation.isPending || workout.completed}
-        >
-          {workout.completed ? "Completed" : "Start Workout"}
-        </Button>
+        
+        {workout.completed ? (
+          <Button variant="outline" disabled>
+            Completed ✅
+          </Button>
+        ) : workout.inProgress === true ? (
+          <Button 
+            onClick={() => completeWorkoutMutation.mutate()}
+            disabled={completeWorkoutMutation.isPending}
+            variant="default"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Finish Workout
+          </Button>
+        ) : (
+          <Button 
+            onClick={() => startWorkoutMutation.mutate()}
+            disabled={startWorkoutMutation.isPending}
+          >
+            Start Workout
+          </Button>
+        )}
       </div>
     </Card>
   );

@@ -30,6 +30,7 @@ export const workouts = pgTable("workouts", {
   type: text("type").notNull(), // 'strength', 'cardio', 'flexibility', etc.
   duration: integer("duration").notNull(),
   difficulty: text("difficulty").notNull(),
+  inProgress: boolean("in_progress").default(false),
   completed: boolean("completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
