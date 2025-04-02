@@ -13,6 +13,8 @@ import Friends from "@/pages/friends";
 import Feed from "@/pages/feed";
 import Profile from "@/pages/profile";
 import Stats from "@/pages/stats";
+import Settings from "@/pages/settings";
+import Achievements from "@/pages/achievements";
 
 function Router() {
   return (
@@ -25,6 +27,8 @@ function Router() {
       <ProtectedRoute path="/feed" component={Feed} />
       <ProtectedRoute path="/profile" component={Profile} />
       <ProtectedRoute path="/stats" component={Stats} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/achievements" component={Achievements} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

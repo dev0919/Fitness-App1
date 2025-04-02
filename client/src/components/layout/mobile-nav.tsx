@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Activity, BarChart3, Flag, Heart, Plus, User } from "lucide-react";
+import { Activity, BarChart3, Flag, Heart, Plus, User, Settings, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {

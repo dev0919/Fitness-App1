@@ -83,20 +83,32 @@ export function Sidebar() {
                 <span>Profile</span>
               </div>
             </Link>
-            <a
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              href="#"
-            >
-              <Trophy className="h-5 w-5" />
-              <span>Achievements</span>
-            </a>
-            <a
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              href="#"
-            >
-              <Settings className="h-5 w-5" />
-              <span>Settings</span>
-            </a>
+            <Link href="/achievements">
+              <div
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
+                  location === "/achievements"
+                    ? "bg-primary-50 text-primary dark:bg-primary-900/20"
+                    : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                )}
+              >
+                <Trophy className="h-5 w-5" />
+                <span>Achievements</span>
+              </div>
+            </Link>
+            <Link href="/settings">
+              <div
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
+                  location === "/settings"
+                    ? "bg-primary-50 text-primary dark:bg-primary-900/20"
+                    : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                )}
+              >
+                <Settings className="h-5 w-5" />
+                <span>Settings</span>
+              </div>
+            </Link>
           </div>
         </div>
       </nav>
