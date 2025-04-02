@@ -282,10 +282,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       // Process deadline field separately to handle date format issues
       const { deadline, ...restData } = req.body;
+      
+      // Convert string deadline to proper Date object if present
+      let parsedDeadline = null;
+      if (deadline) {
+        try {
+          parsedDeadline = new Date(deadline);
+          // Check if valid date
+          if (isNaN(parsedDeadline.getTime())) {
+            parsedDeadline = null;
+          }
+        } catch (e) {
+          parsedDeadline = null;
+        }
+      }
+      
       const goalData = { 
         ...restData, 
         userId,
-        deadline: deadline ? deadline : null
+        deadline: parsedDeadline
       };
       const validatedData = insertGoalSchema.parse(goalData);
       const goal = await storage.createGoal(validatedData);

@@ -76,15 +76,34 @@ export default function Goals() {
       return;
     }
     
+    // Handle the deadline by creating a valid Date object
+    let deadlineDate = null;
+    if (goalData.deadline) {
+      try {
+        deadlineDate = new Date(goalData.deadline);
+        // Validate the date is valid
+        if (isNaN(deadlineDate.getTime())) {
+          console.error("Invalid date format", goalData.deadline);
+          deadlineDate = null;
+        } else {
+          console.log("Valid deadline date:", deadlineDate);
+        }
+      } catch (e) {
+        console.error("Error parsing date:", e);
+        deadlineDate = null;
+      }
+    }
+    
     const newGoal: InsertGoal = {
       userId: user!.id,
       title: goalData.title,
       description: goalData.description,
       type: goalData.type,
       target: Number(goalData.target),
-      deadline: goalData.deadline ? new Date(goalData.deadline) : null,
+      deadline: deadlineDate,
     };
     
+    console.log("Creating goal with data:", newGoal);
     createGoalMutation.mutate(newGoal);
   };
   
