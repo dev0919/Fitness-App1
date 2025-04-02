@@ -128,13 +128,33 @@ export default function Profile() {
                       alt={`${user?.name}'s avatar`}
                       className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-neutral-800 shadow-sm"
                     />
-                    <Button 
-                      size="icon"
-                      variant="secondary"
-                      className="absolute bottom-0 right-0 w-8 h-8 rounded-full"
+                    <label 
+                      className="absolute bottom-0 right-0 cursor-pointer"
+                      htmlFor="profile-upload"
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                      <div className="bg-secondary hover:bg-secondary/90 w-8 h-8 rounded-full flex items-center justify-center">
+                        <Edit className="h-4 w-4" />
+                      </div>
+                      <input
+                        id="profile-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              updateProfileMutation.mutate({
+                                ...user,
+                                profilePicture: reader.result as string
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
                   </div>
                 </div>
                 
