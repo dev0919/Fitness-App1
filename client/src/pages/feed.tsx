@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ThumbsUp, MessageSquare, Award, CalendarClock } from "lucide-react";
+import { ThumbsUp, MessageSquare, Award, CalendarClock, Send } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ActivityUser {
   id: number;
@@ -27,9 +31,33 @@ interface FeedActivity {
 
 export default function Feed() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [statusText, setStatusText] = useState("");
   
   const { data: activities = [], isLoading } = useQuery<FeedActivity[]>({
     queryKey: ["/api/activities"],
+  });
+  
+  const createActivityMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await apiRequest("POST", "/api/activities", { content });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Status posted",
+        description: "Your update has been shared with your friends!",
+      });
+      setStatusText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to post status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
   
   const getActivityIcon = (type: string) => {
@@ -112,6 +140,42 @@ export default function Feed() {
               </Button>
             </div>
           </div>
+          
+          {/* Post status update */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <img 
+                  className="h-10 w-10 rounded-full object-cover" 
+                  src={user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.name} 
+                  alt="Your avatar" 
+                />
+                <div className="flex-1">
+                  <Textarea 
+                    placeholder="Share an update with your friends..."
+                    value={statusText}
+                    onChange={(e) => setStatusText(e.target.value)}
+                    className="min-h-[80px] resize-none"
+                  />
+                  <div className="flex justify-end mt-3">
+                    <Button 
+                      size="sm" 
+                      onClick={() => createActivityMutation.mutate(statusText)}
+                      disabled={!statusText.trim() || createActivityMutation.isPending}
+                    >
+                      {createActivityMutation.isPending ? (
+                        "Posting..."
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-1" /> Post Update
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           {isLoading ? (
             <div className="space-y-6">

@@ -82,7 +82,7 @@ export default function Goals() {
       description: goalData.description,
       type: goalData.type,
       target: Number(goalData.target),
-      deadline: goalData.deadline ? new Date(goalData.deadline) : null,
+      deadline: goalData.deadline ? goalData.deadline : null,
     };
     
     createGoalMutation.mutate(newGoal);

@@ -280,7 +280,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/goals", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const goalData = { ...req.body, userId };
+      // Process deadline field separately to handle date format issues
+      const { deadline, ...restData } = req.body;
+      const goalData = { 
+        ...restData, 
+        userId,
+        deadline: deadline ? deadline : null
+      };
       const validatedData = insertGoalSchema.parse(goalData);
       const goal = await storage.createGoal(validatedData);
       
@@ -461,6 +467,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity feed routes
+  app.post("/api/activities", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { content, type = "status_update" } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      
+      const activity = await storage.createActivity({
+        userId,
+        type,
+        content,
+        metadata: req.body.metadata || {}
+      });
+      
+      // Enrich the activity with user data before returning
+      const user = await storage.getUser(userId);
+      const enrichedActivity = {
+        ...activity,
+        user: user ? {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          profilePicture: user.profilePicture
+        } : null
+      };
+      
+      res.status(201).json(enrichedActivity);
+    } catch (error) {
+      console.error("Error creating activity:", error);
+      res.status(500).json({ message: "Error creating activity" });
+    }
+  });
+  
   app.get("/api/activities", isAuthenticated, async (req, res) => {
     const userId = req.user!.id;
     const userActivities = await storage.getUserActivities(userId);
