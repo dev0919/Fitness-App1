@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -19,19 +19,30 @@ import {
   Calendar,
   Bell,
   Clock,
-  Shield
+  Shield,
+  Check
 } from "lucide-react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Achievement } from "@shared/schema";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Achievement, User as UserType } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ProgressCircle } from "@/components/ui/progress-circle";
 import { Separator } from "@/components/ui/separator";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { user, logoutMutation } = useAuth();
+  const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
+  
+  // References to the form fields
+  const nameRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const profilePicRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
   
   const { data: achievements = [], isLoading: isAchievementsLoading } = useQuery<Achievement[]>({
     queryKey: ["/api/achievements"],
@@ -40,6 +51,43 @@ export default function Profile() {
   const { data: stats, isLoading: isStatsLoading } = useQuery({
     queryKey: ["/api/stats"],
   });
+  
+  // Profile update mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (userData: Partial<UserType>) => {
+      const res = await apiRequest("PUT", `/api/user`, userData);
+      return res.json();
+    },
+    onSuccess: (updatedUser) => {
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully!",
+      });
+      setEditMode(false);
+      queryClient.setQueryData(["/api/user"], updatedUser);
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleSaveProfile = () => {
+    if (!user) return;
+    
+    const updatedUserData: Partial<UserType> = {
+      name: nameRef.current?.value || user.name,
+      username: usernameRef.current?.value || user.username,
+      email: emailRef.current?.value || user.email,
+      profilePicture: profilePicRef.current?.value || user.profilePicture,
+      bio: bioRef.current?.value || user.bio,
+    };
+    
+    updateProfileMutation.mutate(updatedUserData);
+  };
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -287,32 +335,36 @@ export default function Profile() {
                             <Label htmlFor="name">Full Name</Label>
                             <Input 
                               id="name" 
-                              defaultValue={user?.name} 
+                              defaultValue={user?.name || ''}
                               disabled={!editMode}
+                              ref={nameRef}
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="username">Username</Label>
                             <Input 
                               id="username" 
-                              defaultValue={user?.username} 
+                              defaultValue={user?.username || ''} 
                               disabled={!editMode}
+                              ref={usernameRef}
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input 
                               id="email" 
-                              defaultValue={user?.email} 
+                              defaultValue={user?.email || ''} 
                               disabled={!editMode}
+                              ref={emailRef}
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="profile-pic">Profile Picture URL</Label>
                             <Input 
                               id="profile-pic" 
-                              defaultValue={user?.profilePicture} 
+                              defaultValue={user?.profilePicture || ''} 
                               disabled={!editMode}
+                              ref={profilePicRef}
                             />
                           </div>
                         </div>
@@ -322,8 +374,10 @@ export default function Profile() {
                           <Textarea 
                             id="bio" 
                             placeholder="Tell us about yourself and your fitness goals"
+                            defaultValue={user?.bio || ''}
                             disabled={!editMode}
                             rows={4}
+                            ref={bioRef}
                           />
                         </div>
                         
@@ -333,7 +387,18 @@ export default function Profile() {
                               <Button variant="outline" onClick={() => setEditMode(false)}>
                                 Cancel
                               </Button>
-                              <Button>Save Changes</Button>
+                              <Button onClick={handleSaveProfile} disabled={updateProfileMutation.isPending}>
+                                {updateProfileMutation.isPending ? (
+                                  <span className="flex items-center gap-1">
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    Saving...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    <Check className="h-4 w-4" /> Save Changes
+                                  </span>
+                                )}
+                              </Button>
                             </>
                           ) : (
                             <Button onClick={() => setEditMode(true)}>

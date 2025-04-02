@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   profilePicture: text("profile_picture").default("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=80&q=80"),
+  bio: text("bio"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -17,6 +18,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   name: true,
   email: true,
+  bio: true,
 });
 
 // Workouts

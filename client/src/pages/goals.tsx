@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -5,19 +6,87 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Flag, Plus, Calendar, Target, Dumbbell, Weight, Timer } from "lucide-react";
+import { Flag, Plus, Calendar, Target, Dumbbell, Weight, Timer, X } from "lucide-react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Goal } from "@shared/schema";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Goal, InsertGoal } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Goals() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [newGoalOpen, setNewGoalOpen] = useState(false);
+  const [goalData, setGoalData] = useState({
+    title: "",
+    description: "",
+    type: "workout_count",
+    target: 5,
+    deadline: ""
+  });
   
   const { data: goals = [], isLoading } = useQuery<Goal[]>({
     queryKey: ["/api/goals"],
   });
+  
+  const createGoalMutation = useMutation({
+    mutationFn: async (newGoal: InsertGoal) => {
+      const res = await apiRequest("POST", "/api/goals", newGoal);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Goal Created",
+        description: "Your new goal has been created successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      setNewGoalOpen(false);
+      setGoalData({
+        title: "",
+        description: "",
+        type: "workout_count",
+        target: 5,
+        deadline: ""
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to create goal",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleCreateGoal = () => {
+    if (!goalData.title) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a title for your goal",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newGoal: InsertGoal = {
+      userId: user!.id,
+      title: goalData.title,
+      description: goalData.description,
+      type: goalData.type,
+      target: Number(goalData.target),
+      deadline: goalData.deadline ? new Date(goalData.deadline) : null,
+    };
+    
+    createGoalMutation.mutate(newGoal);
+  };
   
   const activeGoals = goals.filter(goal => !goal.completed);
   const completedGoals = goals.filter(goal => goal.completed);
@@ -35,7 +104,7 @@ export default function Goals() {
     }
   };
   
-  const formatDeadline = (date: string | null | undefined) => {
+  const formatDeadline = (date: string | Date | null | undefined) => {
     if (!date) return "No deadline";
     return format(new Date(date), "MMM d, yyyy");
   };
@@ -51,7 +120,37 @@ export default function Goals() {
   );
   
   const GoalCard = ({ goal }: { goal: Goal }) => {
-    const progress = (goal.current / goal.target) * 100;
+    const [updateOpen, setUpdateOpen] = useState(false);
+    const [progressValue, setProgressValue] = useState(goal.current || 0);
+    const currentVal = goal.current || 0;
+    const progress = (currentVal / goal.target) * 100;
+    
+    const updateGoalMutation = useMutation({
+      mutationFn: async ({ id, current }: { id: number; current: number }) => {
+        const res = await apiRequest("PUT", `/api/goals/${id}`, { current });
+        return res.json();
+      },
+      onSuccess: () => {
+        toast({
+          title: "Progress Updated",
+          description: "Your goal progress has been updated!",
+        });
+        setUpdateOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      },
+      onError: (error) => {
+        toast({
+          title: "Failed to update progress",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+    
+    const handleUpdateProgress = () => {
+      updateGoalMutation.mutate({ id: goal.id, current: progressValue });
+    };
     
     return (
       <Card>
@@ -81,7 +180,9 @@ export default function Goals() {
                 </div>
                 
                 {!goal.completed && (
-                  <Button size="sm">Update Progress</Button>
+                  <Button size="sm" onClick={() => setUpdateOpen(true)}>
+                    Update Progress
+                  </Button>
                 )}
                 
                 {goal.completed && (
@@ -89,6 +190,47 @@ export default function Goals() {
                     Completed
                   </span>
                 )}
+                
+                {/* Update Progress Dialog */}
+                <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Update Progress: {goal.title}</DialogTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-4 top-4"
+                        onClick={() => setUpdateOpen(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <div className="mb-4">
+                        <p className="text-sm text-neutral-500 mb-2">
+                          Current progress: {goal.current || 0} / {goal.target}
+                        </p>
+                        <Progress value={progress} className="mb-3" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="progress-value">New Progress Value</Label>
+                        <Input 
+                          id="progress-value" 
+                          type="number"
+                          min="0"
+                          max={goal.target}
+                          value={progressValue}
+                          onChange={(e) => setProgressValue(parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleUpdateProgress} disabled={updateGoalMutation.isPending}>
+                        {updateGoalMutation.isPending ? "Updating..." : "Update Progress"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
@@ -112,7 +254,7 @@ export default function Goals() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button>
+              <Button onClick={() => setNewGoalOpen(true)}>
                 <Plus className="mr-1 h-4 w-4" /> New Goal
               </Button>
             </div>
@@ -143,7 +285,7 @@ export default function Goals() {
                   <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                     Set goals to track your fitness progress and stay motivated
                   </p>
-                  <Button>
+                  <Button onClick={() => setNewGoalOpen(true)}>
                     <Plus className="mr-1 h-4 w-4" /> Create Goal
                   </Button>
                 </Card>
@@ -180,6 +322,108 @@ export default function Goals() {
       </main>
       
       <MobileNav />
+      
+      {/* New Goal Dialog */}
+      <Dialog open={newGoalOpen} onOpenChange={setNewGoalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Goal</DialogTitle>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-4 top-4"
+              onClick={() => setNewGoalOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Goal Title</Label>
+              <Input 
+                id="title" 
+                placeholder="E.g. Complete 10 workouts"
+                value={goalData.title}
+                onChange={(e) => setGoalData({...goalData, title: e.target.value})}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea 
+                id="description" 
+                placeholder="Describe your goal..."
+                value={goalData.description}
+                onChange={(e) => setGoalData({...goalData, description: e.target.value})}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="type">Goal Type</Label>
+              <Select 
+                value={goalData.type}
+                onValueChange={(value) => setGoalData({...goalData, type: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select goal type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="workout_count">
+                    <div className="flex items-center">
+                      <Dumbbell className="h-4 w-4 mr-2" />
+                      <span>Workout Count</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="weight">
+                    <div className="flex items-center">
+                      <Weight className="h-4 w-4 mr-2" />
+                      <span>Weight Goal</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="time">
+                    <div className="flex items-center">
+                      <Timer className="h-4 w-4 mr-2" />
+                      <span>Time-based Goal</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="custom">
+                    <div className="flex items-center">
+                      <Target className="h-4 w-4 mr-2" />
+                      <span>Custom Goal</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="target">Target Value</Label>
+              <Input 
+                id="target" 
+                type="number"
+                min="1"
+                value={goalData.target}
+                onChange={(e) => setGoalData({...goalData, target: parseInt(e.target.value) || 1})}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="deadline">Deadline (Optional)</Label>
+              <Input 
+                id="deadline" 
+                type="date"
+                value={goalData.deadline}
+                onChange={(e) => setGoalData({...goalData, deadline: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateGoal} disabled={createGoalMutation.isPending}>
+              {createGoalMutation.isPending ? "Creating..." : "Create Goal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

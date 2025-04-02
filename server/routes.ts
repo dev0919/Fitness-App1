@@ -30,6 +30,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
 
+  // User profile update route
+  app.put("/api/user", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const userId = req.user!.id;
+      const { name, username, email, profilePicture, bio } = req.body;
+      
+      // Validate username uniqueness if it's changed
+      if (username && username !== req.user!.username) {
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: "Username already exists" });
+        }
+      }
+      
+      // Validate email uniqueness if it's changed
+      if (email && email !== req.user!.email) {
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: "Email already exists" });
+        }
+      }
+      
+      // Update the user
+      const updatedUser = await storage.updateUser(userId, { 
+        name, username, email, profilePicture, bio 
+      });
+      
+      // Update the session user data
+      if (updatedUser) {
+        req.user = updatedUser;
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Middleware to check authentication
   const isAuthenticated = (req: any, res: any, next: any) => {
     if (req.isAuthenticated()) {
