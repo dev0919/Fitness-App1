@@ -260,7 +260,16 @@ export class MemStorage implements IStorage {
   
   async createWorkout(insertWorkout: InsertWorkout): Promise<Workout> {
     const id = this.workoutIdCounter++;
-    const workout: Workout = { ...insertWorkout, id, completed: false };
+    const now = new Date();
+    const workout: Workout = { 
+      ...insertWorkout, 
+      id, 
+      completed: false,
+      inProgress: false,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null
+    };
     this.workouts.set(id, workout);
     return workout;
   }
@@ -269,7 +278,18 @@ export class MemStorage implements IStorage {
     const workout = this.workouts.get(id);
     if (!workout) return undefined;
     
-    const updatedWorkout = { ...workout, ...workoutUpdate };
+    const now = new Date();
+    const updatedFields = {
+      ...workoutUpdate,
+      updatedAt: now
+    };
+    
+    // If workout is being marked as completed, set the completedAt timestamp
+    if (workoutUpdate.completed === true && !workout.completed) {
+      updatedFields.completedAt = now;
+    }
+    
+    const updatedWorkout = { ...workout, ...updatedFields };
     this.workouts.set(id, updatedWorkout);
     return updatedWorkout;
   }

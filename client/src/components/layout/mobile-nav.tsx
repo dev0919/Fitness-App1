@@ -9,7 +9,7 @@ export function MobileNav() {
     { href: "/", label: "Dashboard", icon: <BarChart3 className="text-xl" /> },
     { href: "/workouts", label: "Workouts", icon: <Heart className="text-xl" /> },
     { href: "/feed", label: "Feed", icon: <Activity className="text-xl" /> },
-    { href: "/goals", label: "Goals", icon: <Flag className="text-xl" /> },
+    { href: "/stats", label: "Stats", icon: <BarChart3 className="text-xl" /> },
     { href: "/profile", label: "Profile", icon: <User className="text-xl" /> },
   ];
 

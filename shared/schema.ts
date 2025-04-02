@@ -33,6 +33,8 @@ export const workouts = pgTable("workouts", {
   inProgress: boolean("in_progress").default(false),
   completed: boolean("completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  completedAt: timestamp("completed_at"),
 });
 
 export const insertWorkoutSchema = createInsertSchema(workouts).pick({

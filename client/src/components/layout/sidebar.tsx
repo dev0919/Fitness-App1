@@ -26,6 +26,7 @@ export function Sidebar() {
     { href: "/goals", label: "Goals", icon: <Flag className="h-5 w-5" /> },
     { href: "/friends", label: "Friends", icon: <Users className="h-5 w-5" /> },
     { href: "/feed", label: "Activity Feed", icon: <Activity className="h-5 w-5" /> },
+    { href: "/stats", label: "Statistics", icon: <BarChart3 className="h-5 w-5" /> },
   ];
 
   const handleLogout = () => {

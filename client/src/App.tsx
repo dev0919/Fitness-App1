@@ -12,6 +12,7 @@ import Goals from "@/pages/goals";
 import Friends from "@/pages/friends";
 import Feed from "@/pages/feed";
 import Profile from "@/pages/profile";
+import Stats from "@/pages/stats";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <ProtectedRoute path="/friends" component={Friends} />
       <ProtectedRoute path="/feed" component={Feed} />
       <ProtectedRoute path="/profile" component={Profile} />
+      <ProtectedRoute path="/stats" component={Stats} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

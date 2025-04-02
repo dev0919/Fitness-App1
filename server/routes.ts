@@ -693,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Calculate goal progress
     const goalProgress = activeGoals.length > 0 
-      ? activeGoals.reduce((sum, goal) => sum + (goal.current / goal.target), 0) / activeGoals.length * 100
+      ? activeGoals.reduce((sum, goal) => sum + (goal.current || 0) / goal.target, 0) / activeGoals.length * 100
       : 0;
     
     // Get friend activities
@@ -719,6 +719,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     res.json(stats);
+  });
+  
+  // Workout statistics and analytics endpoint
+  app.get("/api/workout-stats", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get all user workouts
+      const workouts = await storage.getUserWorkouts(userId);
+      const completedWorkouts = workouts.filter(w => w.completed);
+      
+      // Get current timestamp and calculate dates for time ranges
+      const now = new Date();
+      const oneWeekAgo = new Date(now);
+      oneWeekAgo.setDate(now.getDate() - 7);
+      
+      const oneMonthAgo = new Date(now);
+      oneMonthAgo.setMonth(now.getMonth() - 1);
+      
+      const threeMonthsAgo = new Date(now);
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      
+      // Filter workouts by time ranges
+      const lastWeekWorkouts = completedWorkouts.filter(w => {
+        const date = w.completedAt || w.updatedAt || w.createdAt;
+        return date ? new Date(date) >= oneWeekAgo : false;
+      });
+      
+      const lastMonthWorkouts = completedWorkouts.filter(w => {
+        const date = w.completedAt || w.updatedAt || w.createdAt;
+        return date ? new Date(date) >= oneMonthAgo : false;
+      });
+      
+      const lastThreeMonthsWorkouts = completedWorkouts.filter(w => {
+        const date = w.completedAt || w.updatedAt || w.createdAt;
+        return date ? new Date(date) >= threeMonthsAgo : false;
+      });
+      
+      // Group workouts by type
+      const workoutsByType: Record<string, number> = {};
+      completedWorkouts.forEach(workout => {
+        if (workout.type) {
+          workoutsByType[workout.type] = (workoutsByType[workout.type] || 0) + 1;
+        }
+      });
+      
+      // Calculate workout frequency (workouts per week)
+      const weekCount = Math.max(1, Math.ceil(completedWorkouts.length / 4)); // Estimate weeks based on workout count
+      const workoutsPerWeek = completedWorkouts.length / weekCount;
+      
+      // Calculate recent performance trend (increasing or decreasing workout frequency)
+      const recentWorkoutsPerWeek = lastWeekWorkouts.length;
+      const prevWeekDate = new Date(oneWeekAgo);
+      prevWeekDate.setDate(prevWeekDate.getDate() - 7);
+      
+      const prevWeekWorkouts = completedWorkouts.filter(w => {
+        const date = w.completedAt || w.updatedAt || w.createdAt;
+        if (!date) return false;
+        const workoutDate = new Date(date);
+        return workoutDate >= prevWeekDate && workoutDate < oneWeekAgo;
+      });
+      
+      const weeklyTrend = recentWorkoutsPerWeek - prevWeekWorkouts.length;
+      
+      // Weekly workout distribution
+      const workoutsByDay: number[] = Array(7).fill(0);
+      
+      lastMonthWorkouts.forEach(workout => {
+        const date = workout.completedAt || workout.updatedAt || workout.createdAt;
+        if (!date) return;
+        const workoutDate = new Date(date);
+        const dayOfWeek = workoutDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        workoutsByDay[dayOfWeek]++;
+      });
+      
+      // Daily active minutes over the past month
+      const dailyActiveMinutes: { date: string, minutes: number }[] = [];
+      
+      // Create a map for easy lookup
+      const dateToMinutesMap: Record<string, number> = {};
+      
+      lastMonthWorkouts.forEach(workout => {
+        const date = workout.completedAt || workout.updatedAt || workout.createdAt;
+        if (!date) return;
+        const workoutDate = new Date(date);
+        const dateStr = workoutDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        dateToMinutesMap[dateStr] = (dateToMinutesMap[dateStr] || 0) + workout.duration;
+      });
+      
+      // Fill in the last 30 days
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        dailyActiveMinutes.unshift({
+          date: dateStr,
+          minutes: dateToMinutesMap[dateStr] || 0
+        });
+      }
+      
+      // Calculate average workout duration
+      const totalDuration = completedWorkouts.reduce((sum, workout) => sum + workout.duration, 0);
+      const avgDuration = completedWorkouts.length > 0 ? totalDuration / completedWorkouts.length : 0;
+      
+      // Calculate improvement metrics
+      const oldestWorkoutDate = completedWorkouts.length > 0 
+        ? new Date(completedWorkouts.reduce((oldest, workout) => {
+            const date = workout.completedAt || workout.updatedAt || workout.createdAt;
+            if (!date) return oldest;
+            const workoutDate = new Date(date);
+            return workoutDate < oldest ? workoutDate : oldest;
+          }, new Date()))
+        : new Date();
+      
+      const daysActive = Math.round((now.getTime() - oldestWorkoutDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Return the statistics
+      res.json({
+        summary: {
+          totalCompletedWorkouts: completedWorkouts.length,
+          totalActiveMinutes: totalDuration,
+          avgWorkoutDuration: Math.round(avgDuration),
+          workoutsPerWeek: Math.round(workoutsPerWeek * 10) / 10,
+          daysActive: daysActive,
+          weeklyTrend: weeklyTrend
+        },
+        trends: {
+          lastWeek: lastWeekWorkouts.length,
+          lastMonth: lastMonthWorkouts.length,
+          lastThreeMonths: lastThreeMonthsWorkouts.length
+        },
+        workoutsByType: Object.entries(workoutsByType).map(([type, count]) => ({ type, count })),
+        workoutsByDay: [
+          { day: "Sunday", count: workoutsByDay[0] },
+          { day: "Monday", count: workoutsByDay[1] },
+          { day: "Tuesday", count: workoutsByDay[2] },
+          { day: "Wednesday", count: workoutsByDay[3] },
+          { day: "Thursday", count: workoutsByDay[4] },
+          { day: "Friday", count: workoutsByDay[5] },
+          { day: "Saturday", count: workoutsByDay[6] }
+        ],
+        dailyActiveMinutes
+      });
+    } catch (error) {
+      console.error("Error fetching workout statistics:", error);
+      res.status(500).json({ message: "Error fetching workout statistics" });
+    }
   });
 
   const httpServer = createServer(app);
