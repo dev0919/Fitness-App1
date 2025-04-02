@@ -13,14 +13,13 @@ import {
   User, 
   Users
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
-
+  
   if (!user) return null;
-
+  
   const navItems = [
     { href: "/", label: "Dashboard", icon: <BarChart3 className="h-5 w-5" /> },
     { href: "/workouts", label: "Workouts", icon: <Heart className="h-5 w-5" /> },
@@ -42,7 +41,7 @@ export function Sidebar() {
           <span className="text-lg font-bold text-primary">Fitness Buddy</span>
         </Link>
       </div>
-
+      
       <nav className="flex-1 overflow-auto py-4">
         <div className="px-4 py-2">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -113,7 +112,7 @@ export function Sidebar() {
           </div>
         </div>
       </nav>
-
+      
       <div className="border-t p-4 dark:border-neutral-700">
         <div className="flex items-center gap-4">
           <img 
@@ -129,18 +128,15 @@ export function Sidebar() {
               {user.email}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-8 w-8" 
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
