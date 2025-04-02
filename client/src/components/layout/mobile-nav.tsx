@@ -37,8 +37,8 @@ export function MobileNav() {
               <div className={cn(
                 "flex flex-col items-center justify-center",
                 location === item.href
-                  ? "text-primary"
-                  : "text-neutral-500 dark:text-neutral-400"
+                  ? "text-primary dark:text-primary-500"
+                  : "text-neutral-600 dark:text-white"
               )}>
                 {item.icon}
                 <span className="text-xs mt-1">{item.label}</span>

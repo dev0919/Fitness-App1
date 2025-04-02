@@ -54,8 +54,8 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                     location === item.href
-                      ? "bg-primary-50 text-primary dark:bg-primary-900/20"
-                      : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                      ? "bg-primary-50 text-primary dark:bg-primary-900/20 dark:text-primary-500"
+                      : "text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-neutral-800"
                   )}
                 >
                   {item.icon}
@@ -75,8 +75,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                   location === "/profile"
-                    ? "bg-primary-50 text-primary dark:bg-primary-900/20"
-                    : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    ? "bg-primary-50 text-primary dark:bg-primary-900/20 dark:text-primary-500"
+                    : "text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-neutral-800"
                 )}
               >
                 <User className="h-5 w-5" />
@@ -88,8 +88,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                   location === "/achievements"
-                    ? "bg-primary-50 text-primary dark:bg-primary-900/20"
-                    : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    ? "bg-primary-50 text-primary dark:bg-primary-900/20 dark:text-primary-500"
+                    : "text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-neutral-800"
                 )}
               >
                 <Trophy className="h-5 w-5" />
@@ -101,8 +101,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                   location === "/settings"
-                    ? "bg-primary-50 text-primary dark:bg-primary-900/20"
-                    : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    ? "bg-primary-50 text-primary dark:bg-primary-900/20 dark:text-primary-500"
+                    : "text-neutral-700 hover:bg-neutral-100 dark:text-white dark:hover:bg-neutral-800"
                 )}
               >
                 <Settings className="h-5 w-5" />
