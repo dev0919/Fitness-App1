@@ -140,17 +140,33 @@ export default function Profile() {
                         type="file"
                         className="hidden"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
+                            const formData = new FormData();
+                            formData.append('profilePicture', file);
+                            
+                            try {
+                              const res = await fetch('/api/user/profile-picture', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'include'
+                              });
+                              
+                              if (!res.ok) throw new Error('Failed to upload image');
+                              
+                              const data = await res.json();
                               updateProfileMutation.mutate({
                                 ...user,
-                                profilePicture: reader.result as string
+                                profilePicture: data.profilePicture
                               });
-                            };
-                            reader.readAsDataURL(file);
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to upload profile picture",
+                                variant: "destructive"
+                              });
+                            }
                           }
                         }}
                       />
