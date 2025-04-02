@@ -2,29 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import multer from "multer";
-import path from "path";
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: './uploads',
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-  }),
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type'));
-    }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  }
-});
 import { insertWorkoutSchema, insertExerciseSchema, insertGoalSchema, insertFriendSchema, insertActivitySchema, insertAchievementSchema } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
@@ -54,26 +31,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
   // User profile update route
-  // Profile picture upload endpoint
-  app.post("/api/user/profile-picture", isAuthenticated, upload.single('profilePicture'), async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-    
-    try {
-      const userId = req.user!.id;
-      const profilePicture = `/uploads/${req.file.filename}`;
-      
-      // Update user's profile picture
-      const updatedUser = await storage.updateUser(userId, { profilePicture });
-      
-      res.json({ profilePicture });
-    } catch (error) {
-      console.error("Error uploading profile picture:", error);
-      res.status(500).json({ message: "Error uploading profile picture" });
-    }
-  });
-
   app.put("/api/user", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
